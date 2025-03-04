@@ -13,62 +13,87 @@ export class AuthService {
   ) {}
 
   async validateUser(email: string, password: string): Promise<any> {
-    console.log('Validating user:', email); // Debug log
+    console.log('Validating user:', email);
     
-    const user = await this.userModel.findOne({ email });
-    if (!user) {
-      console.log('User not found:', email); // Debug log
+    try {
+      const user = await this.userModel.findOne({ email });
+      if (!user) {
+        console.log('User not found:', email);
+        return null;
+      }
+
+      console.log('Found user:', { email: user.email, id: user._id });
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      console.log('Password validation result:', isPasswordValid);
+
+      if (isPasswordValid) {
+        const { password, ...result } = user.toObject();
+        return result;
+      }
       return null;
+    } catch (error) {
+      console.error('Error validating user:', error);
+      throw new UnauthorizedException('Error validating user credentials');
     }
-
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    console.log('Password validation:', isPasswordValid); // Debug log
-
-    if (isPasswordValid) {
-      const { password, ...result } = user.toObject();
-      return result;
-    }
-    return null;
   }
 
   async login(user: any) {
-    console.log('Generating token for user:', user.email); // Debug log
+    console.log('Generating token for user:', { email: user.email, id: user._id });
     
-    const payload = { email: user.email, sub: user._id, role: user.role };
-    const access_token = this.jwtService.sign(payload);
-    
-    console.log('Token generated successfully'); // Debug log
-    
-    return {
-      access_token,
-      user: {
-        id: user._id,
+    try {
+      const payload = { 
+        email: user.email, 
+        sub: user._id.toString(),
+        role: user.role || 'user'
+      };
+      
+      console.log('Token payload:', payload);
+      const access_token = this.jwtService.sign(payload);
+      console.log('Token generated successfully');
+      
+      const userData = {
+        id: user._id.toString(),
         email: user.email,
-        name: user.name,
-        role: user.role,
-      },
-    };
+        name: user.name || '',
+        role: user.role || 'user',
+      };
+
+      console.log('Returning user data:', userData);
+      
+      return {
+        access_token,
+        user: userData
+      };
+    } catch (error) {
+      console.error('Error generating token:', error);
+      throw new UnauthorizedException('Failed to generate authentication token');
+    }
   }
 
   async register(userData: { name: string; email: string; password: string }) {
-    console.log('Registering new user:', userData.email); // Debug log
+    console.log('Registering new user:', userData.email);
     
-    const existingUser = await this.userModel.findOne({ email: userData.email });
-    if (existingUser) {
-      console.log('User already exists:', userData.email); // Debug log
-      throw new UnauthorizedException('User already exists');
+    try {
+      const existingUser = await this.userModel.findOne({ email: userData.email });
+      if (existingUser) {
+        console.log('User already exists:', userData.email);
+        throw new UnauthorizedException('User already exists');
+      }
+
+      const hashedPassword = await bcrypt.hash(userData.password, 10);
+      const newUser = new this.userModel({
+        ...userData,
+        password: hashedPassword,
+      });
+
+      const savedUser = await newUser.save();
+      console.log('User registered successfully:', { email: userData.email, id: savedUser._id });
+      
+      const { password, ...result } = savedUser.toObject();
+      return result;
+    } catch (error) {
+      console.error('Error registering user:', error);
+      throw new UnauthorizedException(error.message || 'Failed to register user');
     }
-
-    const hashedPassword = await bcrypt.hash(userData.password, 10);
-    const newUser = new this.userModel({
-      ...userData,
-      password: hashedPassword,
-    });
-
-    const savedUser = await newUser.save();
-    console.log('User registered successfully:', userData.email); // Debug log
-    
-    const { password, ...result } = savedUser.toObject();
-    return result;
   }
 } 

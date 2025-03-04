@@ -25,8 +25,8 @@ export class DevicesService {
     return newDevice.save();
   }
 
-  async getAllDevices(userId: string): Promise<Device[]> {
-    return this.deviceModel.find({ owner: userId }).exec();
+  async getAllDevices(): Promise<Device[]> {
+    return this.deviceModel.find().exec();
   }
 
   async getDevice(id: string): Promise<Device> {

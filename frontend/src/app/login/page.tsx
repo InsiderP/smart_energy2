@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { API_ENDPOINTS } from '@/config/api';
+import api, { API_ENDPOINTS } from '@/config/api';
 import Cookies from 'js-cookie';
 
 export default function LoginPage() {
@@ -14,39 +14,34 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    setError(null);
 
     try {
-      const response = await fetch(API_ENDPOINTS.LOGIN, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
+      const response = await api.post(API_ENDPOINTS.LOGIN, {
+        email,
+        password,
       });
 
-      const data = await response.json();
+      const { access_token, user } = response.data;
 
-      if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
-      }
+      // Store token and user data
+      Cookies.set('auth_token', access_token);
+      Cookies.set('user', JSON.stringify(user));
 
-      // Store token in cookie
-      Cookies.set('auth_token', data.token, {
-        expires: 7, // 7 days
-        path: '/',
-      });
+      // Set auth header
+      api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
 
       // Redirect to dashboard
       router.push('/dashboard');
       
     } catch (err: any) {
-      setError(err.message || 'Failed to login');
+      console.error('Login error:', err.response?.data || err.message);
+      setError(err.response?.data?.message || 'Failed to login');
     } finally {
       setLoading(false);
     }

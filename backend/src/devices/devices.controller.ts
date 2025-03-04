@@ -6,15 +6,12 @@ import {
   Delete,
   Body,
   Param,
-  UseGuards,
   Query,
   Request,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { DevicesService } from './devices.service';
 
 @Controller('devices')
-@UseGuards(JwtAuthGuard)
 export class DevicesController {
   constructor(private readonly devicesService: DevicesService) {}
 
@@ -28,8 +25,8 @@ export class DevicesController {
   }
 
   @Get()
-  async getAllDevices(@Request() req) {
-    return this.devicesService.getAllDevices(req.user.userId);
+  async getAllDevices() {
+    return this.devicesService.getAllDevices();
   }
 
   @Get(':id')
