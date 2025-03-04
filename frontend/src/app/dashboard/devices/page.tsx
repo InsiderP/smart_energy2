@@ -23,6 +23,7 @@ interface Device {
   isOn: boolean;
   ipAddress?: string;
   macAddress?: string;
+  isLoading?: boolean;
 }
 
 export default function DevicesPage() {
@@ -74,11 +75,30 @@ export default function DevicesPage() {
 
   const handleToggleDevice = async (deviceId: string, currentStatus: boolean) => {
     try {
+      // Find the device in the current state and update its loading state
+      setDevices(devices.map(d => 
+        d._id === deviceId ? { ...d, isLoading: true } : d
+      ));
+
       await api.put(API_ENDPOINTS.DEVICE(deviceId), { isOn: !currentStatus });
-      fetchDevices();
+      
+      // Fetch the updated device data
+      const response = await api.get(API_ENDPOINTS.DEVICE(deviceId));
+      
+      // Update only the changed device in the state
+      setDevices(devices.map(d => 
+        d._id === deviceId ? { ...response.data, isLoading: false } : d
+      ));
+
+      setError('');
     } catch (err: any) {
       console.error('Error toggling device:', err);
       setError(err.response?.data?.message || 'Failed to toggle device');
+      
+      // Reset the loading state on error
+      setDevices(devices.map(d => 
+        d._id === deviceId ? { ...d, isLoading: false } : d
+      ));
     }
   };
 
@@ -217,8 +237,9 @@ export default function DevicesPage() {
                   variant={device.isOn ? 'destructive' : 'default'}
                   className="w-full mt-4"
                   onClick={() => handleToggleDevice(device._id, device.isOn)}
+                  disabled={device.isLoading}
                 >
-                  {device.isOn ? 'Turn Off' : 'Turn On'}
+                  {device.isLoading ? 'Updating...' : (device.isOn ? 'Turn Off' : 'Turn On')}
                 </Button>
               </div>
             </CardContent>

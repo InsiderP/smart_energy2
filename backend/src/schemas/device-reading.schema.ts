@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
+import { DeviceStatus } from './device.schema';
 
 export type DeviceReadingDocument = DeviceReading & Document;
 
@@ -17,6 +18,18 @@ export class DeviceReading {
   @Prop({ required: true })
   status: boolean; // on/off
 
+  @Prop({ enum: DeviceStatus, required: true })
+  deviceStatus: DeviceStatus; // online/offline/maintenance status
+
+  @Prop({ type: Object })
+  energyMetrics: {
+    instantPower: number; // current power draw in watts
+    voltage: number; // voltage reading
+    current: number; // current in amperes
+    powerFactor: number; // power factor
+    frequency: number; // power frequency in Hz
+  };
+
   @Prop({ type: Object })
   metrics: {
     temperature?: number;
@@ -27,13 +40,13 @@ export class DeviceReading {
     quality?: number; // for camera feed
   };
 
-  @Prop({ type: Object })
-  alerts: {
+  @Prop({ type: [Object] })
+  alerts: [{
     type: string;
     message: string;
     severity: 'low' | 'medium' | 'high';
     timestamp: Date;
-  }[];
+  }];
 }
 
 export const DeviceReadingSchema = SchemaFactory.createForClass(DeviceReading); 
