@@ -12,7 +12,7 @@ export class AuthController {
 
     try {
       // Validate user
-      console.log('Validating user credentials.....');
+      console.log('Validating user credentials....');
       const user = await this.authService.validateUser(
         loginData.email,
         loginData.password,
